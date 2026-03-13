@@ -59,7 +59,7 @@ except ImportError:
 # --- 状態ストア（インメモリ） ---
 neuro_states: dict[str, NeuroState] = {}
 
-INITIAL_STATE = NeuroState(D=50, S=50, C=50, O=0, G=50, E=50, corruption=0)
+INITIAL_STATE = NeuroState(D=50, S=50, C=50, O=20, G=50, E=50, corruption=0)
 
 TOOL_DEFINITIONS: list[Tool] = [
     Tool(

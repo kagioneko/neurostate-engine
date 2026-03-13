@@ -22,7 +22,7 @@ from .interaction_matrix import (
 # 安静時の均衡点（長時間入力がない場合に収束する値）
 # 入力なし放置 → 全値0への収束を防ぐ
 _EQUILIBRIUM = [40.0, 50.0, 50.0, 20.0, 50.0, 40.0]  # D, S, C, O, G, E
-_RESTING_PULL = 0.03  # 均衡点への引き戻し強度（3%/ステップ）
+_RESTING_PULL = 0.05  # 均衡点への引き戻し強度（5%/ステップ）
 
 
 def compute_next_neuro_state(current: NeuroState, input_power: float) -> NeuroState:

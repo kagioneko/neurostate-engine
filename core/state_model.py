@@ -25,7 +25,7 @@ class NeuroState:
     D: float = 50.0
     S: float = 50.0
     C: float = 50.0
-    O: float = 0.0
+    O: float = 20.0
     G: float = 50.0
     E: float = 50.0
     corruption: float = 0.0
