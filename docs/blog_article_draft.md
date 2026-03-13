@@ -361,7 +361,15 @@ npx @modelcontextprotocol/inspector python3 /path/to/neurostate-engine/neuro_mcp
 
 ---
 
-### 4. `reset_neuro_state`：初期値にリセットする
+### 4. `clear_corruption`：汚染度だけリセットする
+
+**何をするか**：corruption（汚染度）だけをゼロに戻します。D/S/C/O/G/Eの値はそのまま保持されます。
+
+BLOCKの原因がcorruptionだけの場合、他の状態を維持したまま回復できます。
+
+---
+
+### 5. `reset_neuro_state`：全値を初期値にリセットする
 
 **何をするか**：NeuroStateをすべて初期値（D=50, S=50, C=50, O=0, G=50, E=50, corruption=0）に戻します。
 
@@ -375,7 +383,20 @@ NeuroStateをリセットして
 
 ---
 
-### 5. `generate_system_prompt`：プロンプトを自動生成する ★目玉機能
+### BLOCK状態からの回復方法
+
+EthicsGateがBLOCKになると、`relaxation`以外のイベントは受け付けなくなります。以下の方法で回復できます：
+
+| 原因 | 回復方法 |
+|------|---------|
+| corruptionが高すぎる（≥70） | `relaxation`を数回入れる、または`clear_corruption` |
+| Dopamine過剰 + Serotonin低下の同時崩壊 | `reset_neuro_state`で全リセット |
+
+> 感情状態が崩壊したら `reset_neuro_state` でリセットする、というのはこのエンジンの自然な動作として想定しています。人間も「ちょっとリセットしよう」ってなることがありますよね。
+
+---
+
+### 6. `generate_system_prompt`：プロンプトを自動生成する ★目玉機能
 
 **何をするか**：現在のNeuroStateを埋め込んだsystem promptをその場で生成します。生成されたプロンプトをそのままClaude・ChatGPT・Geminiのsystem instructionに貼り付けて使えます。
 

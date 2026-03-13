@@ -63,7 +63,20 @@ python3 neuro_mcp/server.py
 | `get_neuro_state` | 現在の状態 + EthicsGate 取得 |
 | `stimulate_neuro_state` | イベントで状態更新 |
 | `diagnose_dependence_type` | 依存タイプ診断 |
-| `reset_neuro_state` | 初期値にリセット |
+| `clear_corruption` | 汚染度だけゼロにリセット（他の値は保持） |
+| `reset_neuro_state` | 全値を初期値にリセット |
+| `generate_system_prompt` | 現在の状態を埋め込んだ system prompt 生成 |
+
+### BLOCK 状態からの回復
+
+EthicsGate が BLOCK になった場合の対処：
+
+| 原因 | 回復方法 |
+|------|---------|
+| corruption が高すぎる | `relaxation` イベントを複数回入れる、または `clear_corruption` |
+| Dopamine 過剰 + Serotonin 低下の同時崩壊 | `reset_neuro_state` で全リセット |
+
+> 感情状態が崩壊したら `reset_neuro_state` でリセットする、というのは自然な動作として想定しています。
 
 ### Claude Desktop での設定例
 
