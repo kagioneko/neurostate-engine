@@ -135,6 +135,23 @@ TOOL_DEFINITIONS: list[Tool] = [
         },
     ),
     Tool(
+        name="clear_corruption",
+        description=(
+            "汚染度（corruption）をゼロにリセットします。"
+            "BLOCK状態からの強制回復に使います。"
+            "他の値（D/S/C/O/G/E）はそのまま保持されます。"
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "description": "ユーザーID（省略時: 'default'）",
+                }
+            },
+        },
+    ),
+    Tool(
         name="reset_neuro_state",
         description="指定ユーザーの NeuroState を初期値にリセットします。",
         inputSchema={
@@ -228,13 +245,13 @@ def _handle_stimulate_neuro_state(args: dict[str, Any]) -> list[TextContent]:
 
     current = _get_state(user_id)
 
-    # EthicsGate チェック（BLOCK 状態では更新拒否）
+    # EthicsGate チェック（BLOCK 状態では relaxation のみ通過させて回復を許可）
     current_ethics = evaluate_ethics_gate(current)
-    if current_ethics.status == "BLOCK":
+    if current_ethics.status == "BLOCK" and event_type != "relaxation":
         result = {
             "error": "EthicsGate BLOCK",
             "reason": current_ethics.reason,
-            "message": "システムは安全のため状態更新を制限しています。",
+            "message": "システムは安全のため状態更新を制限しています。'relaxation' イベントで回復できます。",
         }
         return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
 
@@ -281,6 +298,17 @@ def _handle_diagnose_dependence(args: dict[str, Any]) -> list[TextContent]:
         "diagnosis": diagnosis.to_dict(),
     }
     return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+def _handle_clear_corruption(args: dict[str, Any]) -> list[TextContent]:
+    user_id = args.get("user_id", "default")
+    state = _get_state(user_id)
+    neuro_states[user_id] = NeuroState(
+        D=state.D, S=state.S, C=state.C,
+        O=state.O, G=state.G, E=state.E,
+        corruption=0.0,
+    )
+    return [TextContent(type="text", text=f"ユーザー '{user_id}' の corruption をクリアしました。（他の値は保持）")]
 
 
 def _handle_reset_neuro_state(args: dict[str, Any]) -> list[TextContent]:
@@ -336,6 +364,7 @@ async def run_server() -> None:
             "get_neuro_state": _handle_get_neuro_state,
             "stimulate_neuro_state": _handle_stimulate_neuro_state,
             "diagnose_dependence_type": _handle_diagnose_dependence,
+            "clear_corruption": _handle_clear_corruption,
             "reset_neuro_state": _handle_reset_neuro_state,
             "generate_system_prompt": _handle_generate_system_prompt,
         }

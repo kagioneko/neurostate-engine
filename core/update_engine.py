@@ -19,35 +19,62 @@ from .interaction_matrix import (
 )
 
 
+# 安静時の均衡点（長時間入力がない場合に収束する値）
+# 入力なし放置 → 全値0への収束を防ぐ
+_EQUILIBRIUM = [40.0, 50.0, 50.0, 20.0, 50.0, 40.0]  # D, S, C, O, G, E
+_RESTING_PULL = 0.03  # 均衡点への引き戻し強度（3%/ステップ）
+
+
 def compute_next_neuro_state(current: NeuroState, input_power: float) -> NeuroState:
     """相互作用行列を用いて NeuroState を1ステップ更新する。
 
+    変化のメカニズム:
+    1. 相互作用行列による物質間の相互影響
+    2. 外部刺激（input_power）の付加
+    3. 均衡点への緩やかな引き戻し（放置による全値0収束を防止）
+    4. corruption の更新（負の input_power で直接減少）
+
     Args:
-        current: 現在の NeuroState
-        input_power: 外部刺激の強度（例: 褒め → +2.0, 批判 → -1.0）
+        current:     現在の NeuroState
+        input_power: 外部刺激の強度（正: 活性化、負: 抑制・回復）
 
     Returns:
         更新後の NeuroState
     """
     state_vec = [current.D, current.S, current.C, current.O, current.G, current.E]
 
-    # 行列積 + 外部刺激
+    # 1. 行列積 + 外部刺激
     next_vec = matrix_multiply_state(state_vec)
     next_vec = apply_external_force(next_vec, input_power)
+
+    # 2. 均衡点への引き戻し（S・G の0固着と全値収束を防ぐ）
+    next_vec = [
+        next_vec[i] + _RESTING_PULL * (_EQUILIBRIUM[i] - state_vec[i])
+        for i in range(6)
+    ]
 
     # クランプ
     d, s, c, o, g, e = (clamp(v) for v in next_vec)
 
-    # Corruption の更新
+    # 3. Corruption の更新
     corruption_delta = 0.0
+
+    # 上昇要因
     if d > 90:
         corruption_delta += 5.0   # Dopamine 過剰 → 汚染加速
+
+    # 状態による自然緩和
     if s > 60:
         corruption_delta -= 1.0   # Serotonin 安定 → 汚染緩和
     if o > 40:
         corruption_delta -= 1.5   # Oxytocin 高い → 汚染緩和
     if g > 50:
         corruption_delta -= 0.5   # GABA 安定 → 汚染緩和
+
+    # 負の input_power（relaxation など）で corruption を直接回復
+    # relaxation(power=-0.5) → -1.5 減少 / 強いrelaxation(power=-2.0) → -6.0 減少
+    if input_power < 0:
+        corruption_delta += input_power * 3.0
 
     new_corruption = clamp(current.corruption + corruption_delta)
 
