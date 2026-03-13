@@ -97,17 +97,13 @@ TOOL_DEFINITIONS: list[Tool] = [
                 },
                 "event_type": {
                     "type": "string",
-                    "enum": ["praise", "criticism", "bonding", "stress", "relaxation"],
-                    "description": "発生したイベントの種類",
+                    "description": "発生したイベントの種類: praise / criticism / bonding / stress / relaxation",
                 },
                 "power": {
                     "type": "number",
-                    "minimum": 0.1,
-                    "maximum": 10.0,
-                    "description": "刺激の強度スケール（デフォルト: 1.0）",
+                    "description": "刺激の強度スケール 0.1〜10.0（デフォルト: 1.0）",
                 },
             },
-            "required": ["event_type"],
         },
     ),
     Tool(
@@ -125,15 +121,7 @@ TOOL_DEFINITIONS: list[Tool] = [
                 },
                 "signals": {
                     "type": "object",
-                    "description": "現在の入力シグナル（各値 0.0〜1.0）",
-                    "properties": {
-                        "E": {"type": "number", "description": "感情負荷"},
-                        "K": {"type": "number", "description": "共創レベル"},
-                        "A": {"type": "number", "description": "自律性要求"},
-                        "S": {"type": "number", "description": "話題センシティビティ"},
-                        "R": {"type": "number", "description": "依存リスク"},
-                        "F": {"type": "number", "description": "疲労・過負荷"},
-                    },
+                    "description": "現在の入力シグナル（各値 0.0〜1.0）: E=感情負荷, K=共創レベル, A=自律性要求, S=話題センシティビティ, R=依存リスク, F=疲労・過負荷",
                 },
             },
         },
