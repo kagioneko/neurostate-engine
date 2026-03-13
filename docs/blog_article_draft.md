@@ -150,6 +150,18 @@ cd neurostate-engine
 pip install mcp
 ```
 
+> **`uv` を使う場合**（公式推奨・より高速）：
+> ```bash
+> # uv のインストール（Mac/Linux）
+> curl -LsSf https://astral.sh/uv/install.sh | sh
+> # Windows（PowerShell）
+> powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+>
+> # 依存パッケージのインストール
+> uv venv && source .venv/bin/activate
+> uv add "mcp[cli]"
+> ```
+
 ### Step 3：動作確認
 
 ```bash
@@ -224,6 +236,42 @@ Claude Desktop のMCP設定ファイルは以下にあります：
 > **別の開き方**：Claude Desktop のメニューから **Settings → Developer → Edit Config** を選ぶと設定ファイルが直接開きます。
 
 接続が成功すると、チャット画面の入力欄の近くに 🔧 アイコンが表示されます。クリックすると利用可能なツール一覧が確認できます。
+
+> **Linuxユーザーへ**：Claude DesktopはmacOS/Windowsのみ公式提供されています。LinuxでMCPを使うにはCursorやVS Codeなど他のMCP対応クライアントを使ってください。
+
+---
+
+## うまく動かないときは？
+
+### ログを確認する
+
+| OS | ログの場所 |
+|----|-----------|
+| Mac | `~/Library/Logs/Claude/` |
+| Windows | `%APPDATA%\Claude\logs\` |
+
+```bash
+# Macでリアルタイムにログを追う
+tail -F ~/Library/Logs/Claude/mcp-server-neurostate.log
+```
+
+### MCP Inspector でテストする
+
+Node.js が入っていれば、ブラウザで対話的にツールをテストできます：
+
+```bash
+npx @modelcontextprotocol/inspector python3 /path/to/neurostate-engine/neuro_mcp/server.py
+```
+
+ブラウザが開き、ツール一覧・実行・レスポンス確認が視覚的にできます。
+
+### よくある問題
+
+| 症状 | 対処 |
+|------|------|
+| 🔧 アイコンが出ない | JSONの構文エラー確認 / 絶対パスか確認 / Claude Desktopを完全再起動 |
+| ツールが実行されない | ログを確認 / Inspector で単体テスト |
+| Windows でパスエラー | バックスラッシュを `\\` にエスケープ |
 
 ---
 
