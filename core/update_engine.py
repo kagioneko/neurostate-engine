@@ -48,8 +48,9 @@ def compute_next_neuro_state(current: NeuroState, input_power: float) -> NeuroSt
     next_vec = apply_external_force(next_vec, input_power)
 
     # 2. 均衡点への引き戻し（S・G の0固着と全値収束を防ぐ）
+    # 値が20以下のとき引き戻し強度を2倍にして低値固着を防止
     next_vec = [
-        next_vec[i] + _RESTING_PULL * (_EQUILIBRIUM[i] - state_vec[i])
+        next_vec[i] + _RESTING_PULL * (2.0 if state_vec[i] < 20 else 1.0) * (_EQUILIBRIUM[i] - state_vec[i])
         for i in range(6)
     ]
 
