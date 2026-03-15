@@ -57,8 +57,10 @@ except ImportError:
 
 try:
     from core.prompt_builder import build_system_prompt, ALL_BLOCKS
+    from core.hallucination_sensor import HallucinationSensor, format_check_result
 except ImportError:
     from neurostate_engine.core.prompt_builder import build_system_prompt, ALL_BLOCKS
+    from neurostate_engine.core.hallucination_sensor import HallucinationSensor, format_check_result
 
 # --- 状態ストア（インメモリ） ---
 neuro_states: dict[str, NeuroState] = {}
@@ -154,6 +156,38 @@ TOOL_DEFINITIONS: list[Tool] = [
                     "description": "ユーザーID（省略時: 'default'）",
                 }
             },
+        },
+    ),
+    Tool(
+        name="check_hallucination",
+        description=(
+            "ハルシネーション・センサー。LLMの回答を Self-Reflection で検証し、"
+            "矛盾・根拠不明・過信表現を検出する。Corruption と GABA を更新し、"
+            "Corruption > 70 なら回答先頭に自動で警告を付与する。"
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "description": "ユーザーID（省略時: 'default'）",
+                },
+                "prompt": {
+                    "type": "string",
+                    "description": "ユーザーへの質問・プロンプト",
+                },
+                "response": {
+                    "type": "string",
+                    "description": "LLMが生成した回答（検証対象）",
+                },
+                "backend": {
+                    "type": "string",
+                    "enum": ["api", "cli"],
+                    "description": "LLM呼び出しバックエンド（省略時: api）",
+                    "default": "api",
+                },
+            },
+            "required": ["prompt", "response"],
         },
     ),
     Tool(
@@ -317,6 +351,37 @@ def _handle_reset_neuro_state(args: dict[str, Any]) -> list[TextContent]:
     return [TextContent(type="text", text=f"ユーザー '{user_id}' の NeuroState をリセットしました。")]
 
 
+def _handle_check_hallucination(args: dict[str, Any]) -> list[TextContent]:
+    user_id = args.get("user_id", "default")
+    prompt = args["prompt"]
+    response = args["response"]
+    backend = args.get("backend", "api")
+
+    state = _get_state(user_id)
+    sensor = HallucinationSensor(backend=backend)
+    result = sensor.check(prompt=prompt, response=response, state=state)
+
+    # NeuroState を更新
+    neuro_states[user_id] = result.state_after
+
+    report = format_check_result(result)
+    output = {
+        "guarded_response": result.guarded_response,
+        "warning_injected": result.warning_injected,
+        "issue_count": result.issue_count,
+        "corruption_before": result.state_before.corruption,
+        "corruption_after": result.state_after.corruption,
+        "gaba_before": result.state_before.G,
+        "gaba_after": result.state_after.G,
+        "issues": [
+            {"type": i.type, "excerpt": i.excerpt, "reason": i.reason, "severity": i.severity}
+            for i in result.issues
+        ],
+        "report": report,
+    }
+    return [TextContent(type="text", text=json.dumps(output, ensure_ascii=False, indent=2))]
+
+
 def _handle_generate_system_prompt(args: dict[str, Any]) -> list[TextContent]:
     user_id = args.get("user_id", "default")
     persona_name = args.get("persona_name", "AI")
@@ -358,6 +423,7 @@ async def run_server() -> None:
             "diagnose_dependence_type": _handle_diagnose_dependence,
             "clear_corruption": _handle_clear_corruption,
             "reset_neuro_state": _handle_reset_neuro_state,
+            "check_hallucination": _handle_check_hallucination,
             "generate_system_prompt": _handle_generate_system_prompt,
         }
 
