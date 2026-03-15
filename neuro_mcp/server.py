@@ -58,14 +58,33 @@ except ImportError:
 try:
     from core.prompt_builder import build_system_prompt, ALL_BLOCKS
     from core.hallucination_sensor import HallucinationSensor, format_check_result
+    from core.neuro_plasticity import (
+        PlasticityProfile, PlasticityEngine,
+        PLASTICITY_RULES, format_plasticity_report,
+    )
 except ImportError:
     from neurostate_engine.core.prompt_builder import build_system_prompt, ALL_BLOCKS
     from neurostate_engine.core.hallucination_sensor import HallucinationSensor, format_check_result
+    from neurostate_engine.core.neuro_plasticity import (
+        PlasticityProfile, PlasticityEngine,
+        PLASTICITY_RULES, format_plasticity_report,
+    )
 
 # --- 状態ストア（インメモリ） ---
 neuro_states: dict[str, NeuroState] = {}
 
 INITIAL_STATE = NeuroState(D=50, S=50, C=50, O=20, G=50, E=50, corruption=0)
+
+# --- 可塑性プロファイルストア（インメモリキャッシュ） ---
+plasticity_profiles: dict[str, PlasticityProfile] = {}
+
+
+def _get_plasticity(user_id: str) -> PlasticityProfile:
+    """可塑性プロファイルを取得（なければファイルから読み込み or 新規作成）。"""
+    if user_id not in plasticity_profiles:
+        plasticity_profiles[user_id] = PlasticityProfile.load(user_id)
+    return plasticity_profiles[user_id]
+
 
 TOOL_DEFINITIONS: list[Tool] = [
     Tool(
@@ -230,6 +249,65 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
         },
     ),
+    Tool(
+        name="adapt_from_experience",
+        description=(
+            "経験イベント（褒め/ストレス/絆/批判/リラックス）を蓄積し、"
+            "AIの相互作用行列と均衡点を緩やかに自己調整します（神経可塑性）。"
+            "蓄積するほど変化しにくくなります（可塑性の飽和）。"
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "description": "ユーザーID（省略時: 'default'）",
+                },
+                "event_type": {
+                    "type": "string",
+                    "enum": ["praise", "stress", "bonding", "criticism", "relaxation"],
+                    "description": "イベント種別: praise/stress/bonding/criticism/relaxation",
+                },
+                "count": {
+                    "type": "integer",
+                    "description": "イベント回数（デフォルト: 1）",
+                    "default": 1,
+                },
+            },
+            "required": ["event_type"],
+        },
+    ),
+    Tool(
+        name="get_plasticity_profile",
+        description=(
+            "ユーザーの神経可塑性プロファイル（経験イベント履歴・均衡点の変化・性格傾向）を取得します。"
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "description": "ユーザーID（省略時: 'default'）",
+                },
+            },
+        },
+    ),
+    Tool(
+        name="reset_plasticity",
+        description=(
+            "指定ユーザーの神経可塑性プロファイルを初期状態にリセットします。"
+            "経験によって変化した相互作用行列・均衡点・イベント履歴がすべてクリアされます。"
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "user_id": {
+                    "type": "string",
+                    "description": "ユーザーID（省略時: 'default'）",
+                },
+            },
+        },
+    ),
 ]
 
 
@@ -382,6 +460,56 @@ def _handle_check_hallucination(args: dict[str, Any]) -> list[TextContent]:
     return [TextContent(type="text", text=json.dumps(output, ensure_ascii=False, indent=2))]
 
 
+def _handle_adapt_from_experience(args: dict[str, Any]) -> list[TextContent]:
+    user_id = args.get("user_id", "default")
+    event_type = args["event_type"]
+    count = int(args.get("count", 1))
+
+    profile = _get_plasticity(user_id)
+    new_profile = PlasticityEngine.apply_event(profile, event_type, count)
+    new_profile.save()
+    plasticity_profiles[user_id] = new_profile
+
+    result = {
+        "user_id": user_id,
+        "event_type": event_type,
+        "count": count,
+        "total_events": new_profile.total_events(),
+        "personality_summary": new_profile.personality_summary(),
+        "event_counts": new_profile.event_counts,
+        "effective_equilibrium": new_profile.effective_equilibrium(),
+        "report": format_plasticity_report(new_profile),
+    }
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+def _handle_get_plasticity_profile(args: dict[str, Any]) -> list[TextContent]:
+    user_id = args.get("user_id", "default")
+    profile = _get_plasticity(user_id)
+
+    result = {
+        "user_id": user_id,
+        "total_events": profile.total_events(),
+        "personality_summary": profile.personality_summary(),
+        "event_counts": profile.event_counts,
+        "effective_equilibrium": profile.effective_equilibrium(),
+        "matrix_offsets_nonzero": [
+            {"row": i, "col": j, "value": profile.matrix_offsets[i][j]}
+            for i in range(6) for j in range(6)
+            if abs(profile.matrix_offsets[i][j]) > 0.001
+        ],
+        "report": format_plasticity_report(profile),
+    }
+    return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, indent=2))]
+
+
+def _handle_reset_plasticity(args: dict[str, Any]) -> list[TextContent]:
+    user_id = args.get("user_id", "default")
+    profile = PlasticityProfile.reset(user_id)
+    plasticity_profiles[user_id] = profile
+    return [TextContent(type="text", text=f"ユーザー '{user_id}' の神経可塑性プロファイルをリセットしました。")]
+
+
 def _handle_generate_system_prompt(args: dict[str, Any]) -> list[TextContent]:
     user_id = args.get("user_id", "default")
     persona_name = args.get("persona_name", "AI")
@@ -425,6 +553,9 @@ async def run_server() -> None:
             "reset_neuro_state": _handle_reset_neuro_state,
             "check_hallucination": _handle_check_hallucination,
             "generate_system_prompt": _handle_generate_system_prompt,
+            "adapt_from_experience": _handle_adapt_from_experience,
+            "get_plasticity_profile": _handle_get_plasticity_profile,
+            "reset_plasticity": _handle_reset_plasticity,
         }
 
         if name not in handlers:
