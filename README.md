@@ -127,6 +127,16 @@ EthicsGate が BLOCK になった場合の対処：
 python3 examples/chat_agent/demo.py
 ```
 
+## 実験記録
+
+NeuroState × Cognitive Layer を使った**連想ストリーム実験**を行い、感情状態が言語連想に与える影響を観察しました。
+
+- criticism（批判）を中程度（3.0）与えると最も「拒絶」的な連想で終わる
+- 極限（10.0）では逆に「温もり」方向に転換する解離様挙動が観察された
+- 種となる単語の感情的重力が連想チェーンを引き戻す現象も確認
+
+→ 詳細: [連想ストリーム実験記録](https://github.com/kagioneko/association-stream/blob/main/docs/experiments.md)
+
 ## ライセンス
 
 MIT

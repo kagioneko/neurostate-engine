@@ -180,6 +180,19 @@ NeuroState was developed as part of the **Emilia Lab** research initiative explo
 
 ---
 
+## Experiments
+
+We conducted **association stream experiments** using NeuroState × Cognitive Layer to observe how emotional states influence language association.
+
+Key findings:
+- Moderate criticism (3.0) produces the most defensive/rejective associations ("isolation → rejection")
+- Extreme criticism (10.0) triggers a dissociation-like reversal toward warmth ("comfort → embrace")
+- The emotional gravity of the seed word pulls the association chain back toward its origin
+
+> These are observational findings from AI simulation, not claims about human psychology.
+
+→ Full report: [Association Stream Experiments](https://github.com/kagioneko/association-stream/blob/main/docs/experiments.md)
+
 ## License
 
 MIT © [Emilia Lab](https://kagioneko.com/emilia_lab/)
