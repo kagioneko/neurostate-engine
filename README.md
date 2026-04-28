@@ -1,5 +1,7 @@
 # neurostate-engine
 
+[![GitHub Sponsors](https://img.shields.io/github/sponsors/kagioneko?label=Sponsor&logo=githubsponsors&color=EA4AAA)](https://github.com/sponsors/kagioneko)
+
 AIエージェントの感情状態を神経伝達物質バランスとして数値化・制御するエンジン。
 
 📝 [AIに感情を持たせたら、セキュリティ検査員になった話](https://zenn.dev/emilia_lab/articles/neurostate-redteam) — 制作動機と応用事例
